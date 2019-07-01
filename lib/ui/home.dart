@@ -1,5 +1,6 @@
 import 'package:led_client/src/json_parse.dart' as models;
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 class Home extends StatefulWidget {
   Home({Key key}) : super(key: key);
@@ -10,41 +11,41 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   final GlobalKey<ScaffoldState> _homeKey = GlobalKey<ScaffoldState>();
-  final int _row = 5;
-  final int _col = 5;
+  static final int _row = 5;
+  static final int _col = 5;
+  static final ip = 'http://192.168.0.175:8000/';
+  String _curState = 'default';
   int _curLed = 0;
   int _red = 0;
   int _green = 0;
   int _blue = 0;
   Color _curColor = Color.fromARGB(255, 0, 0, 0);
-  List<List<int>> colors = [
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-  ];
+  List<models.StateLed> _stateLeds;
+//  List<models.StateLed> _stateLeds = List<models.StateLed>.generate(_row * _col, (i) {
+//    return models.StateLed((b){
+//      b.state = '#####';
+//      b.led = -1;
+//      b.r = 0;
+//      b.g = 0;
+//      b.b = 0;
+//    });
+//  });
 
+  @override
+  void initState() {
+    super.initState();
+    _getStateLeds(_curState);
+  }
+
+  Future<void> _getStateLeds(String name) async {
+    final res =
+        await http.get("${ip}led/stateLed_list/", headers: {'name': name});
+    setState(() {
+      _stateLeds = models.parseStateLedList(res.body);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     List<Widget> rowWid = List<Widget>(_row);
     for (var i = _row - 1; i >= 0; --i) {
@@ -58,8 +59,11 @@ class _HomeState extends State<Home> {
         } else {
           no = (r + 1) * _row - c - 1;
         }
-        colWid[c] = _buildLed(context,
-            Color.fromARGB(255, colors[no][0], colors[no][1], colors[no][2]), no);
+        colWid[c] = _buildLed(
+            context,
+            Color.fromARGB(
+                255, _stateLeds[no].r, _stateLeds[no].g, _stateLeds[no].b),
+            no);
       }
       rowWid[i] = Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -152,11 +156,13 @@ class _HomeState extends State<Home> {
             width: 100,
             alignment: Alignment.center,
             child: RaisedButton(
-              onPressed: (){
+              onPressed: () {
                 setState(() {
-                  colors[_curLed][0] = _red;
-                  colors[_curLed][1] = _green;
-                  colors[_curLed][2] = _blue;
+                  _stateLeds[_curLed] = _stateLeds[_curLed].rebuild((b) {
+                    b.r = _red;
+                    b.g = _green;
+                    b.b = _blue;
+                  });
                 });
                 Navigator.pop(context);
               },
@@ -169,24 +175,11 @@ class _HomeState extends State<Home> {
         leading: SizedBox(
           width: 5,
         ),
-        title: Text('LED控制-默认'),
+        title: Text('LED控制-$_curState'),
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: rowWid,
-//        List.generate(_row * _col, (i) {
-//          int r = _row - 1 - (i / _row).floor();
-//          int c = i % _col;
-//          bool r2c = (r % 2 == 0);
-//          int no;
-//          if (r2c) {
-//            no = r * _row + c;
-//          } else {
-//            no = (r + 1) * _row - c - 1;
-//          }
-//          print([r, c]);
-//          return _buildLed(context, Colors.red);
-//        }),
       ),
       bottomNavigationBar: BottomAppBar(
         child: Container(
@@ -214,12 +207,12 @@ class _HomeState extends State<Home> {
       child: IconButton(
         padding: const EdgeInsets.all(0.0),
         iconSize: 30,
-        onPressed: (){
+        onPressed: () {
           setState(() {
             _curLed = key;
-            _red = colors[key][0];
-            _green = colors[key][1];
-            _blue = colors[key][2];
+            _red = _stateLeds[key].r;
+            _green = _stateLeds[key].g;
+            _blue = _stateLeds[key].b;
             _curColor = Color.fromARGB(255, _red, _green, _blue);
           });
           _homeKey.currentState.openDrawer();

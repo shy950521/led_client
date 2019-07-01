@@ -28,6 +28,14 @@ List<State> parseStateList(String json){
   throw UnimplementedError;
 }
 
+List<StateLed> parseStateLedList(String json){
+  List parsed = jsonDecode(json);
+  List<StateLed> ans = List<StateLed>.generate(parsed.length, (i){
+    return standardSerializers.deserializeWith(StateLed.serializer, parsed[i]);
+  });
+  return ans;
+}
+
 StateLed parseStateLed(String json){
   final parsed = jsonDecode(json);
   StateLed stateLed = standardSerializers.deserializeWith(StateLed.serializer, parsed);
