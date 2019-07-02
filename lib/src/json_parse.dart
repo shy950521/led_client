@@ -25,7 +25,11 @@ abstract class State implements Built<State, StateBuilder> {
 }
 
 List<State> parseStateList(String json){
-  throw UnimplementedError;
+  List parsed = jsonDecode(json);
+  List<State> ans = List<State>.generate(parsed.length, (i){
+    return standardSerializers.deserializeWith(State.serializer, parsed[i]);
+  });
+  return ans;
 }
 
 List<StateLed> parseStateLedList(String json){
@@ -40,4 +44,13 @@ StateLed parseStateLed(String json){
   final parsed = jsonDecode(json);
   StateLed stateLed = standardSerializers.deserializeWith(StateLed.serializer, parsed);
   return stateLed;
+}
+
+Map<String, String> serialStateLed(StateLed stateled){
+  final Map<String, dynamic> map = standardSerializers.serializeWith(StateLed.serializer, stateled);
+  Map<String,String> body = {};
+  map.forEach((k,v){
+    body[k] = v.toString();
+  });
+  return body;
 }
