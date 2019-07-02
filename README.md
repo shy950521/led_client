@@ -1,6 +1,6 @@
 # led_client
 
-mobile led client
+mobile led client for raspberry
 
 ## Getting Started
 
