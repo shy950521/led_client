@@ -15,25 +15,28 @@ class _HomeState extends State<Home> {
   static final int _row = 5;
   static final int _col = 5;
   static final ip = 'http://192.168.0.175:8000/';
+//  static final ip = 'http://172.16.243.16:8000/';
   String _curState = 'default';
   int _curLed = 0;
   int _red = 0;
   int _green = 0;
   int _blue = 0;
   Color _curColor = Color.fromARGB(255, 0, 0, 0);
-  Future<http.Response> _submitCurLed;
+  List<Widget> _rowWid;
+  ButtonState _submitLebButton = ButtonState.normal;
+  ButtonState _submiNewState = ButtonState.normal;
   TextEditingController _newState = TextEditingController();
-  // default data
-  List<models.StateLed> _stateLeds =
-      List<models.StateLed>.generate(_row * _col, (i) {
-    return models.StateLed((b) {
-      b.state = 'default';
-      b.led = -1;
-      b.r = 0;
-      b.g = 0;
-      b.b = 0;
-    });
-  });
+  List<models.StateLed> _stateLeds;
+//  List<models.StateLed> _stateLeds =
+//      List<models.StateLed>.generate(_row * _col, (i) {
+//    return models.StateLed((b) {
+//      b.state = 'default';
+//      b.led = -1;
+//      b.r = 0;
+//      b.g = 0;
+//      b.b = 0;
+//    });
+//  });
 
   @override
   void initState() {
@@ -54,15 +57,17 @@ class _HomeState extends State<Home> {
     );
   }
 
-  //TODO: user futureBuilder and add progress indicator.
-  Future<void> _showStates() async {
+  Future<void> _showStates({bool canDismiss: true}) async {
     final res = await http.get("${ip}led/state_list/");
     if (res.statusCode != 200) {
       _showSnackBar("联网错误");
     } else {
       List<models.State> states = models.parseStateList(res.body);
+      List<ButtonState> buttonStates =
+          List<ButtonState>.generate(states.length, (_) => ButtonState.normal);
       showDialog(
           context: context,
+          barrierDismissible: canDismiss,
           builder: (BuildContext context) {
             return Dialog(
               backgroundColor: Colors.white.withOpacity(0.88),
@@ -72,11 +77,24 @@ class _HomeState extends State<Home> {
                 child: ListView(
                   shrinkWrap: true,
                   children: List<Widget>.generate(states.length, (i) {
-                    return RaisedButton(
-                      onPressed: () {},
-                      color: Colors.red,
-                      textColor: Colors.white,
-                      child: Text("${states[i].name}"),
+                    return Container(
+                      padding: EdgeInsets.all(5.0),
+                      child: ProgressButton(
+                        child: Text("${states[i].name}"),
+                        buttonState: buttonStates[i],
+                        onPressed: () async {
+                          setState(() {
+                            buttonStates[i] = ButtonState.inProgress;
+                          });
+                          await _getStateLeds(states[i].name);
+                          setState(() {
+                            buttonStates[i] = ButtonState.normal;
+                            _buildLedMatrix(context);
+                            _curState = states[i].name;
+                          });
+                          Navigator.pop(context);
+                        },
+                      ),
                     );
                   }),
                 ),
@@ -98,8 +116,8 @@ class _HomeState extends State<Home> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
+  //TODO refactor: only redraw the colors
+  void _buildLedMatrix(BuildContext context) {
     List<Widget> rowWid = List<Widget>(_row);
     for (var i = _row - 1; i >= 0; --i) {
       int r = _row - 1 - i;
@@ -123,10 +141,35 @@ class _HomeState extends State<Home> {
         children: colWid,
       );
     }
+    _rowWid = rowWid;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_stateLeds == null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            children: <Widget>[
+              Text("正在加载"),
+              CircularProgressIndicator(),
+            ],
+          ),
+        ),
+        appBar: AppBar(
+          leading: SizedBox(
+            width: 5,
+          ),
+          title: Text('请稍后'),
+        ),
+      );
+    }
+    _buildLedMatrix(context);
     return Scaffold(
       key: _homeKey,
       drawer: Drawer(
           child: ListView(
+        shrinkWrap: true,
         children: <Widget>[
           Container(
             height: 80,
@@ -227,125 +270,46 @@ class _HomeState extends State<Home> {
             height: 20,
           ),
           Container(
-            width: 100,
             alignment: Alignment.center,
-            child: RaisedButton(
-              //TODO futureBuild
-              onPressed: () async {
-                setState(() {
-                  _stateLeds[_curLed] = _stateLeds[_curLed].rebuild((b) {
+            child: SizedBox(
+              width: 200,
+              child: ProgressButton(
+                buttonState: _submitLebButton,
+                child: Text(
+                  "提交",
+                  style: TextStyle(
+                    color: Colors.white,
+                  ),
+                ),
+                onPressed: () async {
+                  setState(() {
+                    _submitLebButton = ButtonState.inProgress;
+                  });
+                  final body =
+                      models.serialStateLed(_stateLeds[_curLed].rebuild((b) {
                     b.r = _red;
                     b.g = _green;
                     b.b = _blue;
-                  });
-                });
-                final body = models.serialStateLed(_stateLeds[_curLed]);
-                final res = await http.post("${ip}led/light/", body: body);
-                if (res.statusCode != 202) {
-                  _showSnackBar("网络错误");
-                } else {
-                  Navigator.pop(context);
-                }
-              },
-              color: Colors.red,
-              textColor: Colors.white,
-              child: Text("提交"),
-            ),
-          ),
-          Container(
-            width: 100,
-            alignment: Alignment.center,
-            child: FutureBuilder<http.Response>(
-              future: _submitCurLed,
-              builder: (BuildContext context,
-                  AsyncSnapshot<http.Response> snapshot) {
-                switch (snapshot.connectionState) {
-                  case ConnectionState.none:
-                    return RaisedButton(
-                      onPressed: () async {
-                        final body = models
-                            .serialStateLed(_stateLeds[_curLed].rebuild((b) {
-                          b.r = _red;
-                          b.g = _green;
-                          b.b = _blue;
-                        }));
-                        setState(() {
-                          _submitCurLed =
-                              http.post("${ip}led/light/", body: body);
-                          _stateLeds[_curLed] =
-                              _stateLeds[_curLed].rebuild((b) {
-                            b.r = _red;
-                            b.g = _green;
-                            b.b = _blue;
-                          });
-                        });
-                      },
-                      color: Colors.red,
-                      textColor: Colors.white,
-                      child: Text("提交"),
-                    );
-                  case ConnectionState.active:
-                  case ConnectionState.waiting:
-                    return RaisedButton(
-                      onPressed: null,
-                      color: Colors.red,
-                      textColor: Colors.white,
-                      child: CircularProgressIndicator(),
-                    );
-                  case ConnectionState.done:
-                    if (snapshot.data == null ||
-                        snapshot.data.statusCode != 202) {
-                      return RaisedButton(
-                        onPressed: () async {
-                          final body = models
-                              .serialStateLed(_stateLeds[_curLed].rebuild((b) {
-                            b.r = _red;
-                            b.g = _green;
-                            b.b = _blue;
-                          }));
-                          setState(() {
-                            _submitCurLed =
-                                http.post("${ip}led/light/", body: body);
-                            _stateLeds[_curLed] =
-                                _stateLeds[_curLed].rebuild((b) {
-                              b.r = _red;
-                              b.g = _green;
-                              b.b = _blue;
-                            });
-                          });
-                        },
-                        color: Colors.red,
-                        textColor: Colors.white,
-                        child: Icon(Icons.error),
-                      );
-                    } else {
-                      _submitCurLed = null;
-                      return RaisedButton(
-                        onPressed: () async {
-                          final body = models
-                              .serialStateLed(_stateLeds[_curLed].rebuild((b) {
-                            b.r = _red;
-                            b.g = _green;
-                            b.b = _blue;
-                          }));
-                          setState(() {
-                            _submitCurLed =
-                                http.post("${ip}led/light/", body: body);
-                            _stateLeds[_curLed] =
-                                _stateLeds[_curLed].rebuild((b) {
-                              b.r = _red;
-                              b.g = _green;
-                              b.b = _blue;
-                            });
-                          });
-                        },
-                        color: Colors.red,
-                        textColor: Colors.white,
-                        child: Text("提交"),
-                      );
-                    }
-                }
-              },
+                  }));
+                  final res = await http.post("${ip}led/light/", body: body);
+                  if (res.statusCode != 202) {
+                    setState(() {
+                      _submitLebButton = ButtonState.error;
+                    });
+                    _showSnackBar("网络错误");
+                  } else {
+                    setState(() {
+                      _submitLebButton = ButtonState.normal;
+                      _stateLeds[_curLed] = _stateLeds[_curLed].rebuild((b) {
+                        b.r = _red;
+                        b.g = _green;
+                        b.b = _blue;
+                      });
+                    });
+                    Navigator.pop(context);
+                  }
+                },
+              ),
             ),
           ),
         ],
@@ -358,8 +322,9 @@ class _HomeState extends State<Home> {
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: rowWid,
+        children: _rowWid,
       ),
+      //TODO replace with progress button
       bottomNavigationBar: BottomAppBar(
         child: Container(
           height: 80.0,
@@ -387,6 +352,36 @@ class _HomeState extends State<Home> {
                                     hintText: "新名字",
                                   ),
                                 ),
+                                ProgressButton(
+                                  child: Text(
+                                    "提交",
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                  buttonState: _submiNewState,
+                                  onPressed: () async {
+                                    setState(() {
+                                      _submiNewState = ButtonState.inProgress;
+                                    });
+                                    Map<String, String> body = {
+                                      "name": _newState.text
+                                    };
+                                    final res = await http.post(
+                                        "${ip}led/save_state/",
+                                        body: body);
+                                    setState(() {
+                                      _submiNewState = ButtonState.normal;
+                                    });
+                                    if (res.statusCode != 202) {
+                                      _showSnackBar("网络错误");
+                                    } else {
+                                      _showSnackBar("保存成功");
+                                      setState(() {
+                                        _curState = _newState.text;
+                                      });
+                                    }
+                                    Navigator.pop(context);
+                                  },
+                                ),
                               ],
                             ),
                           ),
@@ -413,7 +408,21 @@ class _HomeState extends State<Home> {
                 child: Text("覆盖当前"),
               ),
               RaisedButton(
-                onPressed: () {},
+                onPressed: () async {
+                  if (_curState == "default") {
+                    _showSnackBar("无法删除默认");
+                    return;
+                  }
+                  Map<String, String> body = {"name": _curState};
+                  final res =
+                      await http.post("${ip}led/remove_state/", body: body);
+                  if (res.statusCode != 204) {
+                    _showSnackBar("网络错误");
+                  } else {
+                    _showSnackBar("删除成功");
+                    _showStates(canDismiss: false);
+                  }
+                },
                 color: Colors.red,
                 textColor: Colors.white,
                 child: Text("删除当前"),
@@ -422,41 +431,17 @@ class _HomeState extends State<Home> {
           ),
         ),
       ),
+      //TODO progress button?
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.red,
         onPressed: () {
           _showStates();
           setState(() {});
-//          _homeKey.currentState.openDrawer();
         },
         tooltip: 'Increment Counter',
         child: Icon(Icons.add),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.miniStartTop,
-    );
-  }
-
-  FutureBuilder _submitChild(
-      Future<http.Response> futureR, int stateCode, Function() f) {
-    return FutureBuilder(
-      future: futureR,
-      builder: (BuildContext context, AsyncSnapshot snapshot) {
-        switch (snapshot.connectionState) {
-          case ConnectionState.none:
-            return Text("提交");
-          case ConnectionState.active:
-          case ConnectionState.waiting:
-            return CircularProgressIndicator();
-          case ConnectionState.done:
-            if (snapshot.data.statusCode != stateCode) {
-              _showSnackBar("网络错误");
-              return Icon(Icons.error);
-            } else {
-              f();
-              return Icon(Icons.send);
-            }
-        }
-      },
     );
   }
 
