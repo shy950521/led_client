@@ -1,4 +1,6 @@
 import 'package:led_client/src/json_parse.dart' as models;
+import 'package:led_client/src/state.dart' as models;
+import 'package:led_client/src/state_led.dart' as models;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:progress_button/progress_button.dart';
@@ -14,8 +16,8 @@ class _HomeState extends State<Home> {
   final GlobalKey<ScaffoldState> _homeKey = GlobalKey<ScaffoldState>();
   static final int _row = 5;
   static final int _col = 5;
-  static final ip = 'http://192.168.0.175:8000/';
-//  static final ip = 'http://172.16.243.16:8000/';
+//  static final _ip = 'http://192.168.0.175:8000/';
+  static final _ip = 'http://172.16.243.16:8000/';
   String _curState = 'default';
   int _curLed = 0;
   int _red = 0;
@@ -58,7 +60,7 @@ class _HomeState extends State<Home> {
   }
 
   Future<void> _showStates({bool canDismiss: true}) async {
-    final res = await http.get("${ip}led/state_list/");
+    final res = await http.get("${_ip}led/state_list/");
     if (res.statusCode != 200) {
       _showSnackBar("联网错误");
     } else {
@@ -106,7 +108,7 @@ class _HomeState extends State<Home> {
 
   Future<void> _getStateLeds(String name) async {
     final res =
-        await http.get("${ip}led/stateLed_list/", headers: {'name': name});
+        await http.get("${_ip}led/stateLed_list/", headers: {'name': name});
     if (res.statusCode != 200) {
       _showSnackBar("联网错误");
     } else {
@@ -291,7 +293,7 @@ class _HomeState extends State<Home> {
                     b.g = _green;
                     b.b = _blue;
                   }));
-                  final res = await http.post("${ip}led/light/", body: body);
+                  final res = await http.post("${_ip}led/light/", body: body);
                   if (res.statusCode != 202) {
                     setState(() {
                       _submitLebButton = ButtonState.error;
@@ -366,7 +368,7 @@ class _HomeState extends State<Home> {
                                       "name": _newState.text
                                     };
                                     final res = await http.post(
-                                        "${ip}led/save_state/",
+                                        "${_ip}led/save_state/",
                                         body: body);
                                     setState(() {
                                       _submiNewState = ButtonState.normal;
@@ -396,7 +398,7 @@ class _HomeState extends State<Home> {
                 onPressed: () async {
                   Map<String, String> body = {"name": _curState};
                   final res =
-                      await http.post("${ip}led/save_state/", body: body);
+                      await http.post("${_ip}led/save_state/", body: body);
                   if (res.statusCode != 202) {
                     _showSnackBar("网络错误");
                   } else {
@@ -415,7 +417,7 @@ class _HomeState extends State<Home> {
                   }
                   Map<String, String> body = {"name": _curState};
                   final res =
-                      await http.post("${ip}led/remove_state/", body: body);
+                      await http.post("${_ip}led/remove_state/", body: body);
                   if (res.statusCode != 204) {
                     _showSnackBar("网络错误");
                   } else {

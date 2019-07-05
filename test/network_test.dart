@@ -1,7 +1,8 @@
 import "package:test/test.dart";
 import 'package:led_client/src/json_parse.dart';
 import 'package:led_client/src/serializers.dart';
-import 'package:built_value/serializer.dart';
+import 'package:led_client/src/state_led.dart';
+import 'package:led_client/src/state.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 

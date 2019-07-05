@@ -9,6 +9,8 @@ import 'package:built_value/json_object.dart';
 import 'package:built_value/standard_json_plugin.dart';
 import 'package:built_value/serializer.dart';
 import 'json_parse.dart';
+import 'state.dart';
+import 'state_led.dart';
 
 part 'serializers.g.dart';
 
