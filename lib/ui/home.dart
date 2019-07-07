@@ -4,6 +4,7 @@ import 'package:led_client/src/state_led.dart' as models;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:progress_button/progress_button.dart';
+import 'dart:convert';
 
 class Home extends StatefulWidget {
   Home({Key key}) : super(key: key);
@@ -64,7 +65,7 @@ class _HomeState extends State<Home> {
     if (res.statusCode != 200) {
       _showSnackBar("联网错误");
     } else {
-      List<models.State> states = models.parseStateList(res.body);
+      List<models.State> states = models.parseStateList(utf8.decode(res.bodyBytes));
       List<ButtonState> buttonStates =
           List<ButtonState>.generate(states.length, (_) => ButtonState.normal);
       showDialog(
@@ -82,7 +83,7 @@ class _HomeState extends State<Home> {
                     return Container(
                       padding: EdgeInsets.all(5.0),
                       child: ProgressButton(
-                        child: Text("${states[i].name}"),
+                        child: Text(states[i].name),
                         buttonState: buttonStates[i],
                         onPressed: () async {
                           setState(() {
@@ -108,7 +109,7 @@ class _HomeState extends State<Home> {
 
   Future<void> _getStateLeds(String name) async {
     final res =
-        await http.get("${_ip}led/stateLed_list/", headers: {'name': name});
+        await http.post("${_ip}led/stateLed_list/", body: {"name":name});
     if (res.statusCode != 200) {
       _showSnackBar("联网错误");
     } else {
