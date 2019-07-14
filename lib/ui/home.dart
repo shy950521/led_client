@@ -17,13 +17,10 @@ class _HomeState extends State<Home> {
   final GlobalKey<ScaffoldState> _homeKey = GlobalKey<ScaffoldState>();
   static final int _row = 5;
   static final int _col = 5;
-//  static final _ip = 'http://192.168.0.175:8000/';
-  static final _ip = 'http://172.16.243.16:8000/';
+  static final _ip = 'http://192.168.2.109:8000/';
+//  static final _ip = 'http://172.16.243.16:8000/';
   String _curState = 'default';
   int _curLed = 0;
-  int _red = 0;
-  int _green = 0;
-  int _blue = 0;
   Color _curColor = Color.fromARGB(255, 0, 0, 0);
   List<Widget> _rowWid;
   ButtonState _submitLebButton = ButtonState.normal;
@@ -35,9 +32,6 @@ class _HomeState extends State<Home> {
 //    return models.StateLed((b) {
 //      b.state = 'default';
 //      b.led = -1;
-//      b.r = 0;
-//      b.g = 0;
-//      b.b = 0;
 //    });
 //  });
 
@@ -187,15 +181,14 @@ class _HomeState extends State<Home> {
               child: Column(
             children: <Widget>[
               Slider(
-                value: _red.toDouble(),
+                value: _curColor.red.toDouble(),
                 min: 0.0,
                 max: 255.0,
                 inactiveColor: Colors.white,
                 activeColor: Colors.red,
                 onChanged: (double newValue) {
                   setState(() {
-                    _red = newValue.round();
-                    _curColor = _curColor.withRed(_red);
+                    _curColor = _curColor.withRed(newValue.round());
                   });
                 },
               )
@@ -205,15 +198,14 @@ class _HomeState extends State<Home> {
               child: Column(
             children: <Widget>[
               Slider(
-                value: _green.toDouble(),
+                value: _curColor.green.toDouble(),
                 min: 0.0,
                 max: 255.0,
                 inactiveColor: Colors.white,
                 activeColor: Colors.green,
                 onChanged: (double newValue) {
                   setState(() {
-                    _green = newValue.round();
-                    _curColor = _curColor.withGreen(_green);
+                    _curColor = _curColor.withGreen(newValue.round());
                   });
                 },
               )
@@ -223,15 +215,14 @@ class _HomeState extends State<Home> {
               child: Column(
             children: <Widget>[
               Slider(
-                value: _blue.toDouble(),
+                value: _curColor.blue.toDouble(),
                 min: 0.0,
                 max: 255.0,
                 inactiveColor: Colors.white,
                 activeColor: Colors.blue,
                 onChanged: (double newValue) {
                   setState(() {
-                    _blue = newValue.round();
-                    _curColor = _curColor.withBlue(_blue);
+                    _curColor = _curColor.withBlue(newValue.round());
                   });
                 },
               )
@@ -290,9 +281,9 @@ class _HomeState extends State<Home> {
                   });
                   final body =
                       models.serialStateLed(_stateLeds[_curLed].rebuild((b) {
-                    b.r = _red;
-                    b.g = _green;
-                    b.b = _blue;
+                    b.r = _curColor.red;
+                    b.g = _curColor.green;
+                    b.b = _curColor.blue;
                   }));
                   final res = await http.post("${_ip}led/light/", body: body);
                   if (res.statusCode != 202) {
@@ -304,9 +295,9 @@ class _HomeState extends State<Home> {
                     setState(() {
                       _submitLebButton = ButtonState.normal;
                       _stateLeds[_curLed] = _stateLeds[_curLed].rebuild((b) {
-                        b.r = _red;
-                        b.g = _green;
-                        b.b = _blue;
+                        b.r = _curColor.red;
+                        b.g = _curColor.green;
+                        b.b = _curColor.blue;
                       });
                     });
                     Navigator.pop(context);
@@ -456,9 +447,6 @@ class _HomeState extends State<Home> {
       child: RaisedButton(
         onPressed: () {
           setState(() {
-            _red = color.red;
-            _blue = color.blue;
-            _green = color.green;
             _curColor = color;
           });
         },
@@ -478,10 +466,7 @@ class _HomeState extends State<Home> {
         onPressed: () {
           setState(() {
             _curLed = key;
-            _red = _stateLeds[key].r;
-            _green = _stateLeds[key].g;
-            _blue = _stateLeds[key].b;
-            _curColor = Color.fromARGB(255, _red, _green, _blue);
+            _curColor = Color.fromARGB(255, _stateLeds[key].r, _stateLeds[key].g, _stateLeds[key].b);
           });
           _homeKey.currentState.openDrawer();
         },
