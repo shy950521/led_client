@@ -15,10 +15,10 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   final GlobalKey<ScaffoldState> _homeKey = GlobalKey<ScaffoldState>();
-  static final int _row = 5;
-  static final int _col = 5;
-  static final _ip = 'http://192.168.2.109:8000/';
-//  static final _ip = 'http://172.16.243.16:8000/';
+  static final int _row = 12;
+  static final int _col = 12;
+//  static final _ip = 'http://192.168.0.100:8000/';
+  static final _ip = 'http://192.168.4.1:8000/';
   String _curState = 'default';
   int _curLed = 0;
   Color _curColor = Color.fromARGB(255, 0, 0, 0);
