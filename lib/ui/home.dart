@@ -17,9 +17,10 @@ class _HomeState extends State<Home> {
   final GlobalKey<ScaffoldState> _homeKey = GlobalKey<ScaffoldState>();
   static final int _row = 12;
   static final int _col = 12;
-//  static final _ip = 'http://192.168.0.100:8000/';
+//  static final _ip = 'http://10.42.0.1:8000/';
   static final _ip = 'http://192.168.4.1:8000/';
-  String _curState = 'default';
+  String _default = '默认线路';
+  String _curState = '默认线路';
   int _curLed = 0;
   Color _curColor = Color.fromARGB(255, 0, 0, 0);
   List<Widget> _rowWid;
@@ -284,6 +285,7 @@ class _HomeState extends State<Home> {
                     b.r = _curColor.red;
                     b.g = _curColor.green;
                     b.b = _curColor.blue;
+                    b.led = _curLed;
                   }));
                   final res = await http.post("${_ip}led/light/", body: body);
                   if (res.statusCode != 202) {
@@ -325,7 +327,8 @@ class _HomeState extends State<Home> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: <Widget>[
-              RaisedButton(
+              MaterialButton(
+                minWidth: 70,
                 onPressed: () {
                   showDialog(
                       context: context,
@@ -399,11 +402,59 @@ class _HomeState extends State<Home> {
                 },
                 color: Colors.red,
                 textColor: Colors.white,
-                child: Text("覆盖当前"),
+                child: Text("覆盖此线路"),
+              ),
+              MaterialButton(
+                minWidth: 40,
+                onPressed: () async {
+                  Map<String, String> body = {"r": "0", "g":"0", "b":"0"};
+                  final res =
+                      await http.post("${_ip}led/set_all/", body: body);
+                  if (res.statusCode != 202) {
+                    _showSnackBar("网络错误");
+                  } else {
+                    for (var i = 0; i < _stateLeds.length; i ++) {
+                      setState(() {
+                        _stateLeds[i] = _stateLeds[i].rebuild((b) {
+                          b.r = 0;
+                          b.g = 0;
+                          b.b = 0;
+                        });
+                      });
+                    }
+                  }
+                },
+                color: Colors.black,
+                textColor: Colors.white,
+                child: Text("全灭"),
+              ),
+              MaterialButton(
+                minWidth: 40,
+                onPressed: () async {
+                  Map<String, String> body = {"r": "255", "g":"255", "b":"255"};
+                  final res =
+                      await http.post("${_ip}led/set_all/", body: body);
+                  if (res.statusCode != 202) {
+                    _showSnackBar("网络错误");
+                  } else {
+                    for (var i = 0; i < _stateLeds.length; i ++) {
+                      setState(() {
+                        _stateLeds[i] = _stateLeds[i].rebuild((b) {
+                          b.r = 255;
+                          b.g = 255;
+                          b.b = 255;
+                        });
+                      });
+                    }
+                  }
+                },
+                color: Colors.white,
+                textColor: Colors.black,
+                child: Text("全亮"),
               ),
               RaisedButton(
                 onPressed: () async {
-                  if (_curState == "default") {
+                  if (_curState == _default) {
                     _showSnackBar("无法删除默认");
                     return;
                   }
@@ -419,7 +470,7 @@ class _HomeState extends State<Home> {
                 },
                 color: Colors.red,
                 textColor: Colors.white,
-                child: Text("删除当前"),
+                child: Text("删除此线路"),
               ),
             ],
           ),
