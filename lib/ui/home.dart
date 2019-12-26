@@ -15,8 +15,8 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   final GlobalKey<ScaffoldState> _homeKey = GlobalKey<ScaffoldState>();
-  static final int _row = 12;
-  static final int _col = 12;
+  static final int _row = 16;
+  static final int _col = 11;
 //  static final _ip = 'http://10.42.0.1:8000/';
   static final _ip = 'http://192.168.4.1:8000/';
   String _default = '默认线路';
@@ -116,25 +116,45 @@ class _HomeState extends State<Home> {
 
   //TODO refactor: only redraw the colors
   void _buildLedMatrix(BuildContext context) {
-    List<Widget> rowWid = List<Widget>(_row);
+    List<Widget> rowWid = List<Widget>(_row + 1);
+    rowWid[0] = Padding(
+      padding: const EdgeInsets.only(left:35.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: List<Widget>.generate(_col, (i){
+          return SizedBox(
+              width: 20,
+              child: Center(child: Text((i + 1).toString()))
+          );
+        }),
+      ),
+    );
     for (var i = _row - 1; i >= 0; --i) {
       int r = _row - 1 - i;
       bool l2r = (r % 2 == 0);
-      List<Widget> colWid = List<Widget>(_col);
+      List<Widget> colWid = List<Widget>(_col + 1);
+      colWid[0] = SizedBox(
+          width:20,
+          child: Text((r + 1).toString())
+      );
       for (var c = 0; c < _col; ++c) {
         int no;
         if (l2r) {
-          no = r * _row + c;
+          no = r * _col + c;
         } else {
-          no = (r + 1) * _row - c - 1;
+          no = (r + 1) * _col - c - 1;
         }
-        colWid[c] = _buildLed(
+//        print(r);
+//        print(c);
+//        print(no);
+//        print("...");
+        colWid[c + 1] = _buildLed(
             context,
             Color.fromARGB(
                 255, _stateLeds[no].r, _stateLeds[no].g, _stateLeds[no].b),
             no);
       }
-      rowWid[i] = Row(
+      rowWid[i + 1] = Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: colWid,
       );
