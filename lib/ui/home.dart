@@ -15,10 +15,11 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   final GlobalKey<ScaffoldState> _homeKey = GlobalKey<ScaffoldState>();
-  static final int _row = 16;
-  static final int _col = 11;
-//  static final _ip = 'http://10.42.0.1:8000/';
+//  static final _ip = 'http://192.168.2.113:8000/';
   static final _ip = 'http://192.168.4.1:8000/';
+  //ToDo set row and col
+  int _row = 10;
+  int _col = 15;
   String _default = '默认线路';
   String _curState = '默认线路';
   int _curLed = 0;
@@ -118,12 +119,12 @@ class _HomeState extends State<Home> {
   void _buildLedMatrix(BuildContext context) {
     List<Widget> rowWid = List<Widget>(_row + 1);
     rowWid[0] = Padding(
-      padding: const EdgeInsets.only(left:35.0),
+      padding: const EdgeInsets.only(left:30.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        mainAxisAlignment: MainAxisAlignment.end,
         children: List<Widget>.generate(_col, (i){
           return SizedBox(
-              width: 20,
+              width: 30,
               child: Center(child: Text((i + 1).toString()))
           );
         }),
@@ -134,7 +135,7 @@ class _HomeState extends State<Home> {
       bool l2r = (r % 2 == 0);
       List<Widget> colWid = List<Widget>(_col + 1);
       colWid[0] = SizedBox(
-          width:20,
+          width:30,
           child: Text((r + 1).toString())
       );
       for (var c = 0; c < _col; ++c) {
@@ -336,9 +337,13 @@ class _HomeState extends State<Home> {
         ),
         title: Text('LED控制-$_curState'),
       ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: _rowWid,
+      body: ListView(
+        scrollDirection: Axis.horizontal,
+        children: <Widget>[Column(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: _rowWid,
+        )
+        ],
       ),
       //TODO replace with progress button
       bottomNavigationBar: BottomAppBar(
