@@ -18,8 +18,8 @@ class _HomeState extends State<Home> {
 //  static final _ip = 'http://192.168.2.113:8000/';
   static final _ip = 'http://192.168.4.1:8000/';
   //ToDo set row and col
-  int _row = 10;
-  int _col = 15;
+  int _row = 16;
+  int _col = 12;
   String _default = '默认线路';
   String _curState = '默认线路';
   int _curLed = 0;
@@ -76,8 +76,45 @@ class _HomeState extends State<Home> {
                 child: ListView(
                   shrinkWrap: true,
                   children: List<Widget>.generate(states.length, (i) {
-                    return Container(
-                      padding: EdgeInsets.all(5.0),
+                    return Dismissible(
+                      background: Container(color: Colors.red),
+                      confirmDismiss: (DismissDirection direction) async {
+                        if (states[i].name == _default){
+                          // can not delete default
+                          return false;
+                        }
+                        return await showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              title: const Text("再确认"),
+                              content: const Text("确认删除?"),
+                              actions: <Widget>[
+                                FlatButton(
+                                    onPressed: () => Navigator.of(context).pop(true),
+                                    child: const Text("删除")
+                                ),
+                                FlatButton(
+                                  onPressed: () => Navigator.of(context).pop(false),
+                                  child: const Text("取消"),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                      onDismissed: (direction) async{
+                        Map<String, String> body = {"name": states[i].name};
+                        final res =
+                            await http.post("${_ip}led/remove_state/", body: body);
+                        if (res.statusCode != 204) {
+                          _showSnackBar("网络错误");
+                        } else {
+                          _showSnackBar("删除成功");
+                          _showStates(canDismiss: false);
+                        }
+                      },
+                      key: Key(states[i].name),
                       child: ProgressButton(
                         child: Text(states[i].name),
                         buttonState: buttonStates[i],
@@ -86,9 +123,10 @@ class _HomeState extends State<Home> {
                             buttonStates[i] = ButtonState.inProgress;
                           });
                           await _getStateLeds(states[i].name);
+                          List<Widget> content = _buildLedMatrix(context);
                           setState(() {
                             buttonStates[i] = ButtonState.normal;
-                            _buildLedMatrix(context);
+                            _rowWid = content;
                             _curState = states[i].name;
                           });
                           Navigator.pop(context);
@@ -116,18 +154,22 @@ class _HomeState extends State<Home> {
   }
 
   //TODO refactor: only redraw the colors
-  void _buildLedMatrix(BuildContext context) {
+  List<Widget> _buildLedMatrix(BuildContext context) {
     List<Widget> rowWid = List<Widget>(_row + 1);
-    rowWid[0] = Padding(
-      padding: const EdgeInsets.only(left:30.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: List<Widget>.generate(_col, (i){
-          return SizedBox(
-              width: 30,
-              child: Center(child: Text((i + 1).toString()))
-          );
-        }),
+    double width = (60 * _col).toDouble();
+    rowWid[0] = Container(
+      width: width,
+      child: Padding(
+        padding: const EdgeInsets.only(left:55.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: List<Widget>.generate(_col, (i){
+            return SizedBox(
+                width: 30,
+                child: Center(child: Text((i + 1).toString()))
+            );
+          }),
+        ),
       ),
     );
     for (var i = _row - 1; i >= 0; --i) {
@@ -155,12 +197,15 @@ class _HomeState extends State<Home> {
                 255, _stateLeds[no].r, _stateLeds[no].g, _stateLeds[no].b),
             no);
       }
-      rowWid[i + 1] = Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: colWid,
+      rowWid[i + 1] = Container(
+        width: width,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: colWid,
+        ),
       );
     }
-    _rowWid = rowWid;
+    return rowWid;
   }
 
   @override
@@ -183,7 +228,7 @@ class _HomeState extends State<Home> {
         ),
       );
     }
-    _buildLedMatrix(context);
+    _rowWid = _buildLedMatrix(context);
     return Scaffold(
       key: _homeKey,
       drawer: Drawer(
@@ -416,13 +461,34 @@ class _HomeState extends State<Home> {
               ),
               RaisedButton(
                 onPressed: () async {
-                  Map<String, String> body = {"name": _curState};
-                  final res =
-                      await http.post("${_ip}led/save_state/", body: body);
-                  if (res.statusCode != 202) {
-                    _showSnackBar("网络错误");
-                  } else {
-                    _showSnackBar("保存成功");
+                  bool overRide = await showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: const Text("再确认"),
+                        content: const Text("确认覆盖?"),
+                        actions: <Widget>[
+                          FlatButton(
+                              onPressed: () => Navigator.of(context).pop(true),
+                              child: const Text("覆盖")
+                          ),
+                          FlatButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: const Text("取消"),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                  if (overRide){
+                    Map<String, String> body = {"name": _curState};
+                    final res =
+                    await http.post("${_ip}led/save_state/", body: body);
+                    if (res.statusCode != 202) {
+                      _showSnackBar("网络错误");
+                    } else {
+                      _showSnackBar("保存成功");
+                    }
                   }
                 },
                 color: Colors.red,
@@ -477,26 +543,26 @@ class _HomeState extends State<Home> {
                 textColor: Colors.black,
                 child: Text("全亮"),
               ),
-              RaisedButton(
-                onPressed: () async {
-                  if (_curState == _default) {
-                    _showSnackBar("无法删除默认");
-                    return;
-                  }
-                  Map<String, String> body = {"name": _curState};
-                  final res =
-                      await http.post("${_ip}led/remove_state/", body: body);
-                  if (res.statusCode != 204) {
-                    _showSnackBar("网络错误");
-                  } else {
-                    _showSnackBar("删除成功");
-                    _showStates(canDismiss: false);
-                  }
-                },
-                color: Colors.red,
-                textColor: Colors.white,
-                child: Text("删除此线路"),
-              ),
+//              RaisedButton(
+//                onPressed: () async {
+//                  if (_curState == _default) {
+//                    _showSnackBar("无法删除默认");
+//                    return;
+//                  }
+//                  Map<String, String> body = {"name": _curState};
+//                  final res =
+//                      await http.post("${_ip}led/remove_state/", body: body);
+//                  if (res.statusCode != 204) {
+//                    _showSnackBar("网络错误");
+//                  } else {
+//                    _showSnackBar("删除成功");
+//                    _showStates(canDismiss: false);
+//                  }
+//                },
+//                color: Colors.red,
+//                textColor: Colors.white,
+//                child: Text("删除此线路"),
+//              ),
             ],
           ),
         ),
@@ -506,7 +572,6 @@ class _HomeState extends State<Home> {
         backgroundColor: Colors.red,
         onPressed: () {
           _showStates();
-          setState(() {});
         },
         tooltip: 'Increment Counter',
         child: Icon(Icons.add),
