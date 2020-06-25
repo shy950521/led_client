@@ -27,6 +27,10 @@ class _HomeState extends State<Home> {
   List<Widget> _rowWid;
   ButtonState _submitLebButton = ButtonState.normal;
   ButtonState _submiNewState = ButtonState.normal;
+  Text _submitNewInfo = Text(
+    "提交",
+    style: TextStyle(color: Colors.white),
+  );
   TextEditingController _newState = TextEditingController();
   List<models.StateLed> _stateLeds;
 //  List<models.StateLed> _stateLeds =
@@ -111,7 +115,6 @@ class _HomeState extends State<Home> {
                           _showSnackBar("网络错误");
                         } else {
                           _showSnackBar("删除成功");
-                          _showStates(canDismiss: false);
                         }
                       },
                       key: Key(states[i].name),
@@ -301,15 +304,15 @@ class _HomeState extends State<Home> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: <Widget>[
-              _colorPrefab(context, Colors.green),
-              _colorPrefab(context, Colors.red),
-              _colorPrefab(context, Colors.blue),
+              _colorPrefab(context, Colors.greenAccent),
+              _colorPrefab(context, Colors.redAccent),
+              _colorPrefab(context, Colors.blueAccent),
               _colorPrefab(context, Colors.white),
               _colorPrefab(context, Colors.black),
-              _colorPrefab(context, Colors.yellow),
-              _colorPrefab(context, Colors.deepOrange),
-              _colorPrefab(context, Colors.cyan),
-              _colorPrefab(context, Colors.purple),
+              _colorPrefab(context, Colors.yellowAccent),
+              _colorPrefab(context, Colors.orangeAccent),
+              _colorPrefab(context, Colors.cyanAccent),
+              _colorPrefab(context, Colors.purpleAccent),
             ],
           ),
           SizedBox(
@@ -403,55 +406,61 @@ class _HomeState extends State<Home> {
                   showDialog(
                       context: context,
                       builder: (BuildContext context) {
-                        return Dialog(
-                          child: Container(
-                            width: 500,
-                            height: 200,
-                            padding: EdgeInsets.all(12.0),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: <Widget>[
-                                TextField(
-                                  textAlign: TextAlign.center,
-                                  controller: _newState,
-                                  keyboardType: TextInputType.text,
-                                  decoration: InputDecoration(
-                                    hintText: "新名字",
+                        return StatefulBuilder(
+                            builder: (context, setState) {
+                              return Dialog(
+                                child: Container(
+                                  width: 500,
+                                  height: 200,
+                                  padding: EdgeInsets.all(12.0),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                    children: <Widget>[
+                                      TextField(
+                                        textAlign: TextAlign.center,
+                                        controller: _newState,
+                                        keyboardType: TextInputType.text,
+                                        decoration: InputDecoration(
+                                          hintText: "新名字",
+                                        ),
+                                      ),
+                                      ProgressButton(
+                                        child: _submitNewInfo,
+                                        buttonState: _submiNewState,
+                                        onPressed: () async {
+                                          setState(() {
+                                            _submiNewState = ButtonState.inProgress;
+                                            _submitNewInfo = Text(
+                                              "稍后",
+                                              style: TextStyle(color: Colors.white),
+                                            );
+                                          });
+                                          Map<String, String> body = {
+                                            "name": _newState.text
+                                          };
+                                          final res = await http.post(
+                                              "${_ip}led/save_state/",
+                                              body: body);
+                                          if (res.statusCode != 202) {
+                                            _showSnackBar("网络错误");
+                                            setState(() {
+                                              _submiNewState = ButtonState.error;
+                                            });
+                                            await Future.delayed(const Duration(seconds: 1), (){});
+                                          } else {
+                                            _showSnackBar("保存成功");
+                                            setState(() {
+                                              _curState = _newState.text;
+                                            });
+                                          }
+                                          Navigator.pop(context);
+                                        },
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                ProgressButton(
-                                  child: Text(
-                                    "提交",
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                  buttonState: _submiNewState,
-                                  onPressed: () async {
-                                    setState(() {
-                                      _submiNewState = ButtonState.inProgress;
-                                    });
-                                    Map<String, String> body = {
-                                      "name": _newState.text
-                                    };
-                                    final res = await http.post(
-                                        "${_ip}led/save_state/",
-                                        body: body);
-                                    setState(() {
-                                      _submiNewState = ButtonState.normal;
-                                    });
-                                    if (res.statusCode != 202) {
-                                      _showSnackBar("网络错误");
-                                    } else {
-                                      _showSnackBar("保存成功");
-                                      setState(() {
-                                        _curState = _newState.text;
-                                      });
-                                    }
-                                    Navigator.pop(context);
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
+                              );
+                            }
                         );
                       });
                 },
