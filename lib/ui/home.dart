@@ -1,10 +1,14 @@
+import 'package:flutter/services.dart';
+import 'package:led_client/src/model/config.dart';
 import 'package:led_client/src/json_parse.dart' as models;
-import 'package:led_client/src/state.dart' as models;
-import 'package:led_client/src/state_led.dart' as models;
+import 'package:led_client/src/model/state.dart' as models;
+import 'package:led_client/src/model/state_led.dart' as models;
+import 'package:led_client/src/model/config.dart' as models;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:progress_button/progress_button.dart';
 import 'dart:convert';
+import 'package:bidirectional_scroll_view/bidirectional_scroll_view.dart';
 
 class Home extends StatefulWidget {
   Home({Key key}) : super(key: key);
@@ -17,9 +21,12 @@ class _HomeState extends State<Home> {
   final GlobalKey<ScaffoldState> _homeKey = GlobalKey<ScaffoldState>();
 //  static final _ip = 'http://192.168.2.113:8000/';
   static final _ip = 'http://192.168.4.1:8000/';
+  static final _ROW = 13;
+  static final _COL = 13;
   //ToDo set row and col
-  int _row = 16;
-  int _col = 12;
+  bool _startCheck = false;
+  int _row = _ROW;
+  int _col = _COL;
   String _default = '默认线路';
   String _curState = '默认线路';
   int _curLed = 0;
@@ -31,20 +38,29 @@ class _HomeState extends State<Home> {
     "提交",
     style: TextStyle(color: Colors.white),
   );
+  // new name
   TextEditingController _newState = TextEditingController();
+  // set row & col
+  TextEditingController _rowCon = TextEditingController();
+  TextEditingController _colCon = TextEditingController();
+//  List<models.StateLed> _stateLeds;
   List<models.StateLed> _stateLeds;
-//  List<models.StateLed> _stateLeds =
-//      List<models.StateLed>.generate(_row * _col, (i) {
-//    return models.StateLed((b) {
-//      b.state = 'default';
-//      b.led = -1;
-//    });
-//  });
 
   @override
   void initState() {
     super.initState();
-    _getStateLeds(_curState);
+    _getConfig().then((config){
+      _stateLeds = List<models.StateLed>.generate(_row * _col, (i) {
+        return models.StateLed((b) {
+          b.state = '默认线路';
+          b.led = i;
+          b.r = 0;
+          b.b = 0;
+          b.g = 0;
+        });
+      });
+      _getStateLeds(_curState);
+    });
   }
 
   void _showSnackBar(String value) {
@@ -150,10 +166,40 @@ class _HomeState extends State<Home> {
     if (res.statusCode != 200) {
       _showSnackBar("联网错误");
     } else {
+      List<models.StateLed> fetched = models.parseStateLedList(res.body);
       setState(() {
-        _stateLeds = models.parseStateLedList(res.body);
+        if (fetched.length > _stateLeds.length){
+          _stateLeds = fetched;
+        } else {
+          _stateLeds = List<models.StateLed>.generate(_stateLeds.length, (i) {
+            return models.StateLed((b) {
+              b.state = '默认线路';
+              b.led = i;
+              b.r = 0;
+              b.b = 0;
+              b.g = 0;
+            });
+          });
+          _stateLeds.setRange(0, fetched.length, fetched);
+        }
+        print("_stateLed" + _stateLeds.length.toString());
+        _startCheck = true;
+//        _stateLeds = models.parseStateLedList(res.body);
       });
     }
+  }
+
+  Future<Config> _getConfig() async {
+    Config config;
+    final res = await http.get("${_ip}led/get_config/0");
+    if (res.statusCode != 200) {
+      _showSnackBar("联网错误");
+    } else {
+      config = models.parseConfig(res.body);
+      _row = config.rowCount;
+      _col = config.colCount;
+    }
+    return config;
   }
 
   //TODO refactor: only redraw the colors
@@ -161,6 +207,7 @@ class _HomeState extends State<Home> {
     List<Widget> rowWid = List<Widget>(_row + 1);
     double width = (60 * _col).toDouble();
     rowWid[0] = Container(
+      height: 50,
       width: width,
       child: Padding(
         padding: const EdgeInsets.only(left:55.0),
@@ -190,10 +237,6 @@ class _HomeState extends State<Home> {
         } else {
           no = (r + 1) * _col - c - 1;
         }
-//        print(r);
-//        print(c);
-//        print(no);
-//        print("...");
         colWid[c + 1] = _buildLed(
             context,
             Color.fromARGB(
@@ -201,6 +244,7 @@ class _HomeState extends State<Home> {
             no);
       }
       rowWid[i + 1] = Container(
+        height: 50,
         width: width,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -213,7 +257,7 @@ class _HomeState extends State<Home> {
 
   @override
   Widget build(BuildContext context) {
-    if (_stateLeds == null) {
+    if (!_startCheck) {
       return Scaffold(
         body: Center(
           child: Column(
@@ -385,13 +429,26 @@ class _HomeState extends State<Home> {
         ),
         title: Text('LED控制-$_curState'),
       ),
-      body: ListView(
+//      body: Container(
+//        child: BidirectionalScrollViewPlugin(
+//          child: Column(
+//            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+//            children: _rowWid,
+//          ),
+//        ),
+//      ),
+      body: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        children: <Widget>[Column(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: _rowWid,
-        )
-        ],
+        child: SizedBox(
+          width: _col * 62.00,
+          child: ListView(
+            scrollDirection: Axis.vertical,
+            children: <Widget>[Column(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: _rowWid,
+            )],
+          ),
+        ),
       ),
       //TODO replace with progress button
       bottomNavigationBar: BottomAppBar(
@@ -400,6 +457,113 @@ class _HomeState extends State<Home> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: <Widget>[
+              MaterialButton(
+                minWidth: 70,
+                onPressed: () {
+                  showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return StatefulBuilder(
+                            builder: (context, setState) {
+                              return Dialog(
+                                child: Container(
+                                  width: 500,
+                                  height: 200,
+                                  padding: EdgeInsets.all(12.0),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                    children: <Widget>[
+                                      TextField(
+                                        textAlign: TextAlign.center,
+                                        controller: _rowCon,
+                                        inputFormatters: <TextInputFormatter>[WhitelistingTextInputFormatter.digitsOnly],
+                                        keyboardType: TextInputType.number,
+                                        decoration: InputDecoration(
+                                          hintText: "行数",
+                                        ),
+                                      ),
+                                      TextField(
+                                        textAlign: TextAlign.center,
+                                        controller: _colCon,
+                                        inputFormatters: <TextInputFormatter>[WhitelistingTextInputFormatter.digitsOnly],
+                                        keyboardType: TextInputType.number,
+                                        decoration: InputDecoration(
+                                          hintText: "列数",
+                                        ),
+                                      ),
+                                      ProgressButton(
+                                        child: _submitNewInfo,
+                                        buttonState: _submiNewState,
+                                        onPressed: () async {
+                                          setState(() {
+                                            _submiNewState = ButtonState.inProgress;
+                                            _submitNewInfo = Text(
+                                              "稍后",
+                                              style: TextStyle(color: Colors.white),
+                                            );
+                                          });
+                                          Map<String, String> body = {
+                                            "rowCount": _rowCon.text,
+                                            "colCount": _colCon.text
+                                          };
+                                          final res = await http.post(
+                                              "${_ip}led/set_config/",
+                                              body: body);
+                                          if (res.statusCode != 202) {
+                                            _showSnackBar("网络错误");
+                                            setState(() {
+                                              _submiNewState = ButtonState.error;
+                                            });
+                                            await Future.delayed(const Duration(seconds: 1), (){});
+                                          } else {
+                                            _showSnackBar("保存成功");
+                                            setState(() {
+                                              _curState = _newState.text;
+                                              _row = int.parse(_rowCon.text);
+                                              _col = int.parse(_colCon.text);
+                                            });
+                                            if (_row * _col >
+                                                _stateLeds.length) {
+                                              _stateLeds.insertAll(
+                                                  _stateLeds.length,
+                                                  List<
+                                                      models.StateLed>.generate(
+                                                      _row * _col -
+                                                          _stateLeds.length, (
+                                                      i) {
+                                                    return models.StateLed((b) {
+                                                      b.state = '默认线路';
+                                                      b.led = i;
+                                                      b.r = 0;
+                                                      b.b = 0;
+                                                      b.g = 0;
+                                                    });
+                                                  }));
+                                            }
+                                            List<Widget> content = _buildLedMatrix(context);
+                                            setState(() {
+                                              _submitNewInfo = Text(
+                                                "提交",
+                                                style: TextStyle(color: Colors.white),
+                                              );
+                                              _rowWid = content;
+                                            });
+                                          }
+                                          Navigator.pop(context);
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
+                        );
+                      });
+                },
+                color: Colors.red,
+                textColor: Colors.white,
+                child: Text("更改长宽"),
+              ),
               MaterialButton(
                 minWidth: 70,
                 onPressed: () {
@@ -451,6 +615,10 @@ class _HomeState extends State<Home> {
                                             _showSnackBar("保存成功");
                                             setState(() {
                                               _curState = _newState.text;
+                                              _submitNewInfo = Text(
+                                                "提交",
+                                                style: TextStyle(color: Colors.white),
+                                              );
                                             });
                                           }
                                           Navigator.pop(context);
@@ -531,9 +699,23 @@ class _HomeState extends State<Home> {
               MaterialButton(
                 minWidth: 40,
                 onPressed: () async {
-                  Map<String, String> body = {"r": "255", "g":"255", "b":"255"};
-                  final res =
-                      await http.post("${_ip}led/set_all/", body: body);
+                  final body =
+                  models.serialStateLed(_stateLeds[_stateLeds.length - 1].rebuild((b) {
+                    b.r = 255;
+                    b.g = 255;
+                    b.b = 255;
+                    b.led = b.led;
+                  }));
+                  var res = await http.post("${_ip}led/light/", body: body);
+                  if (res.statusCode != 202) {
+                    setState(() {
+                      _submitLebButton = ButtonState.error;
+                    });
+                    _showSnackBar("网络错误");
+                  }
+                  Map<String, String> colBody = {"r": "255", "g":"255", "b":"255"};
+                  res =
+                      await http.post("${_ip}led/set_all/", body: colBody);
                   if (res.statusCode != 202) {
                     _showSnackBar("网络错误");
                   } else {

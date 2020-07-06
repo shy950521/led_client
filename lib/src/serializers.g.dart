@@ -7,6 +7,7 @@ part of serializers;
 // **************************************************************************
 
 Serializers _$serializers = (new Serializers().toBuilder()
+      ..add(Config.serializer)
       ..add(State.serializer)
       ..add(StateLed.serializer))
     .build();

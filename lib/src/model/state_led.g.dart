@@ -15,7 +15,7 @@ class _$StateLedSerializer implements StructuredSerializer<StateLed> {
   final String wireName = 'StateLed';
 
   @override
-  Iterable serialize(Serializers serializers, StateLed object,
+  Iterable<Object> serialize(Serializers serializers, StateLed object,
       {FullType specifiedType = FullType.unspecified}) {
     final result = <Object>[
       'state',
@@ -35,7 +35,7 @@ class _$StateLedSerializer implements StructuredSerializer<StateLed> {
   }
 
   @override
-  StateLed deserialize(Serializers serializers, Iterable serialized,
+  StateLed deserialize(Serializers serializers, Iterable<Object> serialized,
       {FullType specifiedType = FullType.unspecified}) {
     final result = new StateLedBuilder();
 

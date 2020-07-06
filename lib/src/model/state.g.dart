@@ -15,7 +15,7 @@ class _$StateSerializer implements StructuredSerializer<State> {
   final String wireName = 'State';
 
   @override
-  Iterable serialize(Serializers serializers, State object,
+  Iterable<Object> serialize(Serializers serializers, State object,
       {FullType specifiedType = FullType.unspecified}) {
     final result = <Object>[
       'name',
@@ -26,7 +26,7 @@ class _$StateSerializer implements StructuredSerializer<State> {
   }
 
   @override
-  State deserialize(Serializers serializers, Iterable serialized,
+  State deserialize(Serializers serializers, Iterable<Object> serialized,
       {FullType specifiedType = FullType.unspecified}) {
     final result = new StateBuilder();
 

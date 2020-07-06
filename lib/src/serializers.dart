@@ -9,8 +9,9 @@ import 'package:built_value/json_object.dart';
 import 'package:built_value/standard_json_plugin.dart';
 import 'package:built_value/serializer.dart';
 import 'json_parse.dart';
-import 'state.dart';
-import 'state_led.dart';
+import 'model/state.dart';
+import 'model/state_led.dart';
+import 'model/config.dart';
 
 part 'serializers.g.dart';
 
@@ -28,6 +29,7 @@ part 'serializers.g.dart';
 @SerializersFor([
   StateLed,
   State,
+  Config,
 ])
 Serializers serializers = _$serializers;
 

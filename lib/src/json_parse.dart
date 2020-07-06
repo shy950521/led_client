@@ -1,7 +1,8 @@
 import "dart:convert";
-import 'state_led.dart';
-import 'state.dart';
+import 'model/state_led.dart';
+import 'model/state.dart';
 import 'serializers.dart';
+import 'model/config.dart';
 
 List<State> parseStateList(String json){
   List parsed = jsonDecode(json);
@@ -23,6 +24,21 @@ StateLed parseStateLed(String json){
   final parsed = jsonDecode(json);
   StateLed stateLed = standardSerializers.deserializeWith(StateLed.serializer, parsed);
   return stateLed;
+}
+
+Config parseConfig(String json){
+  final parsed = jsonDecode(json);
+  Config config = standardSerializers.deserializeWith(Config.serializer, parsed);
+  return config;
+}
+
+Map<String, String> serialConfig(Config config){
+  final Map<String, dynamic> map = standardSerializers.serializeWith(Config.serializer, config);
+  Map<String,String> body = {};
+  map.forEach((k,v){
+    body[k] = v.toString();
+  });
+  return body;
 }
 
 Map<String, String> serialStateLed(StateLed stateled){
